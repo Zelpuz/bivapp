@@ -1,4 +1,5 @@
-import pandas as pd, numpy as np
+import pandas as pd, numpy as np, os
+dirname = os.path.dirname(__file__)
 
 def ImportOpenairDataExample():
     """
@@ -9,7 +10,7 @@ def ImportOpenairDataExample():
     Wind speeds are in m/s.
     Wind directions are in degrees, with 0/360 being winds from the north.
     """
-    df = pd.read_csv("/data/openair_test_data.csv")
+    df = pd.read_csv(dirname+"/sampledata/openair_test_data.csv")
     df = df.drop(columns=["Unnamed: 0"])
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_index()
@@ -28,7 +29,7 @@ def ImportOpenairDataExample():
 def ImportTorontoNO2():
     """Imports test pollution data. The data is from 125 Resources Rd., Toronto, 2023-01-01 to 2023-12-31."""
     # Import and rename columns
-    pol_df = pd.read_csv("/data/NO2_2023.csv", skiprows=7)
+    pol_df = pd.read_csv(dirname+"/sampledata/NO2_2023.csv", skiprows=7)
     pol_df.columns = [
         "pollutant",
         "naps_id",
@@ -68,7 +69,7 @@ def ImportTorontoNO2():
 def ImportTorontoMet():
     """Imports test meteorology. The data is from Toronto's Pearson Airport, 2023-01-01 to 2023-12-31."""
     # Import and rename columns
-    met_df = pd.read_csv("/data/climate-hourly.csv")
+    met_df = pd.read_csv(dirname+"/sampledata/climate-hourly.csv")
     met_df = met_df[["UTC_DATE", "WIND_DIRECTION", "WIND_SPEED"]]
     met_df.columns = ["datetime", "wind_dir", "wind_speed"]
 

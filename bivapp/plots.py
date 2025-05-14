@@ -13,7 +13,7 @@ np.int = int
 
 # Now for the real imports
 import matplotlib.pyplot as plt
-import pandas as pd, os
+import pandas as pd
 import cmcrameri.cm as cm
 from scipy.interpolate import griddata
 from shapely import MultiPoint, Point, intersection, convex_hull
