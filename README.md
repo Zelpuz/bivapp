@@ -26,7 +26,7 @@ fig, ax = bp.BivariatePlotRawGAM(
 fig.set_figwidth(6)
 fig.set_figheight(4.5)
 ```
-[Example from BivariatePlotRawGAM](/examples/images/example_openair_so2_raw_gam.png)
+![Example from BivariatePlotRawGAM](/examples/images/example_openair_so2_raw_gam.png)
 
 ## Existing solutions
 The [`openair`](https://github.com/openair-project/openair/tree/master) package for R provides all these features, but is obviously in R and not Python. The topic of bivariate polar plots in Python also pops up occasionally, like [here](https://stackoverflow.com/questions/61940629/bivariate-polar-plots-in-python), [here](https://stackoverflow.com/questions/61702585/pollution-rose-plot-gridded), [here](https://stackoverflow.com/questions/9071084/how-to-create-a-polar-contour-plot), and [here](https://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/). Lastly, there is the existing [`windrose`](https://github.com/python-windrose/windrose) library, but it lacks bivariate polar plots.
