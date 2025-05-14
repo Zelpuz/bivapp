@@ -1,0 +1,28 @@
+[project]
+name = "bivapp"
+version = "0.0.1"
+authors = [
+    { name = "Taylor D. Edwards", email="td.edwards@yahoo.com"}
+]
+description = "Bivariate polar plots in Python"
+readme = {"file" = "README.md", "content-type" = "text/markdown"}
+requires-python = ">=3.13"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "scipy == 1.15.2",
+    "numpy == 2.2.5",
+    "pandas == 2.2.3",
+    "matplotlib >= 3.10.1",
+    "cmcrameri >= 1.8",
+    "shapely >= 2.1.0",
+    "pygam >= 0.8.0",
+]
+
+[build-system]
+requires = [
+    "hatchling >= 1.27",
+]
+build-backend = "hatchling.build"
