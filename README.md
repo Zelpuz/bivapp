@@ -10,6 +10,8 @@ What it says on the tin. This repo provides functions for producing bivariate po
 At this early stage functions are only self-documented. Proper documentation is planned.
 
 ## Getting started
+Install from PyPI: `pip install bivapp`. Note that because the dependency `pyGAM` has fallen behind on maintenance `bivapp` depends on specific versions of some common dependencies, so you might want to use it in a dedicated virtual environment for the time being.
+
 ```python
 from bivapp.sampledata import ImportOpenairDataExample
 import bivapp.plots as bp
