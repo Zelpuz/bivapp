@@ -20,13 +20,18 @@ from bivapp.sampledata import ImportOpenairDataExample
 import bivapp.plots as bp
 
 df = ImportOpenairDataExample()
-fig, ax = bp.BivariatePlotRawGAM(
-    df["so2"], 
-    df['ws'], 
-    df['wd'], 
-    pred_res=200, 
-    vmax=df['so2'].quantile(0.9),
-    colourbar_label="SO$_2$ [ppbv]"
+fig, axs = bp.BivariatePlotRawGAM(
+    df["so2"],
+    df["ws"],
+    df["wd"],
+    pred_res=200,
+    positive=True,
+    vmin=None,
+    vmax=df["so2"].quantile(0.9),
+    cmap=cm.batlowK,
+    colourbar_label="SO$_2$ [ppbv]",
+    masking_method="near",
+    near_dist=1,
 )
 fig.set_figwidth(6)
 fig.set_figheight(4.5)
