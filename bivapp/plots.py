@@ -83,8 +83,6 @@ def _makeFigurePretty(plot, fig, ax, lowlim, highlim, colourbar_label, label_int
         roundlim = label_interval * np.ceil(wind_bins[-1]/label_interval)
         ticklabels=np.arange(-roundlim, roundlim+1, label_interval)
         ticks = np.linspace(lowlim, highlim, len(ticklabels)) # int() floors
-        print(ticks)
-        print(ticklabels)
     else:
         roundlim = label_interval * np.ceil(highlim/label_interval)
         ticks = np.arange(np.floor(lowlim), np.ceil(highlim)+1, label_interval)
