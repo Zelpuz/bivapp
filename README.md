@@ -18,6 +18,7 @@ Here's an example of a basic plotting setup.
 ```python
 from bivapp.sampledata import ImportOpenairDataExample
 import bivapp.plots as bp
+import cmcrameri.cm as cm
 
 df = ImportOpenairDataExample()
 fig, axs = bp.BivariatePlotRawGAM(
