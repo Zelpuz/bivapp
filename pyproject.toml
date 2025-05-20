@@ -1,6 +1,6 @@
 [project]
 name = "bivapp"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     { name = "Taylor D. Edwards", email="td.edwards@yahoo.com"}
 ]
