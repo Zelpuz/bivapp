@@ -23,7 +23,9 @@ from pygam import GAM, te  # pyGAM maintanance lapsed. Waiting for update.
 np.random.seed(117)
 
 
-def _makeScatterPlot(xs, ys, zs, vmin, vmax, cmap, colourbar_label, wind_unit, scatter_kwds):
+def _makeScatterPlot(
+    xs, ys, zs, vmin, vmax, cmap, colourbar_label, wind_unit, scatter_kwds
+):
     # Create and return the plot
     fig, ax = plt.subplots(1, 1, figsize=(8, 8), layout="constrained")
 
@@ -44,13 +46,15 @@ def _makeScatterPlot(xs, ys, zs, vmin, vmax, cmap, colourbar_label, wind_unit, s
         lowlim=-squarelim,
         highlim=squarelim,
         colourbar_label=colourbar_label,
-        wind_unit=wind_unit
+        wind_unit=wind_unit,
     )
     ax.set_aspect("equal", "box")
     return fig, ax
 
 
-def _makeImagePlot(reshaped, resolution, wind_bins, vmin, vmax, cmap, colourbar_label, wind_unit):
+def _makeImagePlot(
+    reshaped, resolution, wind_bins, vmin, vmax, cmap, colourbar_label, wind_unit
+):
     # Create and return the plot
     fig, ax = plt.subplots(1, 1, figsize=(8, 8), layout="constrained")
 
@@ -73,31 +77,41 @@ def _makeImagePlot(reshaped, resolution, wind_bins, vmin, vmax, cmap, colourbar_
     return fig, ax
 
 
-def _makeFigurePretty(plot, fig, ax, lowlim, highlim, colourbar_label, label_interval=5, wind_bins=None, wind_unit="m/s"):
+def _makeFigurePretty(
+    plot,
+    fig,
+    ax,
+    lowlim,
+    highlim,
+    colourbar_label,
+    label_interval=5,
+    wind_bins=None,
+    wind_unit="m/s",
+):
     fig.colorbar(plot, ax=ax, label=colourbar_label, shrink=0.5)
     ax.set_xlim(np.floor(lowlim), np.ceil(highlim))
     ax.set_ylim(np.floor(lowlim), np.ceil(highlim))
 
     # Choose ticks and ticklabels based on if this is an imshow or scatter
     if wind_bins is not None:
-        roundlim = label_interval * np.ceil(wind_bins[-1]/label_interval)
-        ticklabels=np.arange(-roundlim, roundlim+1, label_interval)
-        ticks = np.linspace(lowlim, highlim, len(ticklabels)) # int() floors
+        roundlim = label_interval * np.ceil(wind_bins[-1] / label_interval)
+        ticklabels = np.arange(-roundlim, roundlim + 1, label_interval)
+        ticks = np.linspace(lowlim, highlim, len(ticklabels))  # int() floors
     else:
-        roundlim = label_interval * np.ceil(highlim/label_interval)
-        ticks = np.arange(np.floor(lowlim), np.ceil(highlim)+1, label_interval)
+        roundlim = label_interval * np.ceil(highlim / label_interval)
+        ticks = np.arange(np.floor(lowlim), np.ceil(highlim) + 1, label_interval)
         ticklabels = ticks
 
     # Make labels only show for positive values
     # The chained int->str typing strips the decimal
     ticklabels_str = np.array(ticklabels).astype(int).astype(str)
-    ticklabels_str[ticklabels <= 0] = ''
+    ticklabels_str[ticklabels <= 0] = ""
     ticklabels_str[-1] += " " + wind_unit
 
     # Add labels and put axes in middle
     ax.set_xticks(ticks)
     ax.set_yticks(ticks)
-    ax.set_xticklabels([]) # no labels on x
+    ax.set_xticklabels([])  # no labels on x
     ax.set_yticklabels(ticklabels_str)
     ax.spines["left"].set_position("center")
     ax.spines["bottom"].set_position("center")
@@ -113,9 +127,11 @@ def _makeFigurePretty(plot, fig, ax, lowlim, highlim, colourbar_label, label_int
     for radius in ticklabels:
         if radius > 0:
             # print(radius)
-            if wind_bins is not None: # image plots have wind_bins
-                radius *= 0.5 * highlim  / np.ceil(wind_bins[-1])
-            circle = plt.Circle((middle, middle), radius, fill=False, ec="k", ls="--", lw=0.5)
+            if wind_bins is not None:  # image plots have wind_bins
+                radius *= 0.5 * highlim / np.ceil(wind_bins[-1])
+            circle = plt.Circle(
+                (middle, middle), radius, fill=False, ec="k", ls="--", lw=0.5
+            )
             ax.add_patch(circle)
 
 
@@ -364,4 +380,6 @@ def BivariatePlotRawGAM(
     if positive:
         pred[pred < 0] = 0
 
-    return _makeImagePlot(pred, pred_res, wind_bins, vmin, vmax, cmap, colourbar_label, wind_unit)
+    return _makeImagePlot(
+        pred, pred_res, wind_bins, vmin, vmax, cmap, colourbar_label, wind_unit
+    )
