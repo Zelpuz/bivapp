@@ -136,7 +136,30 @@ def _makeFigurePretty(
 
 
 def _getWindComponents(wind_speed, wind_dir):
-    """Get wind components from wind speed and direction."""
+    """Get cartesian wind vector components from wind speed and direction.
+
+    This expresses the wind as a vector pointing in the direction the wind is
+    coming from. For example, wind from the north at 1 m/s gives an output of
+    (0, 1). An easterly 1 m/s wind returns (1, 0).
+
+    This might differ from other sources that might express wind as a vector
+    point in the direction of air mass flow. If you desire that convention, simply
+    take the negative of the output of this function.
+
+    Parameters
+    ----------
+    wind_speed : array-like
+        Wind speed data. Should be the same length as wind_dir.
+    wind_dir : array-like
+        Wind direction data. Should be the same length as wind_speed.
+    Returns
+    -------
+    wind_u : numpy array
+        Wind speed component in the u direction (east-west). Positive values indicate
+        wind from the east.
+    wind_v : numpy array
+        Wind speed component in the v direction (north-south). Positive values indicate
+        wind from the north."""
     wind_u = wind_speed * np.sin(np.deg2rad(wind_dir))
     wind_v = wind_speed * np.cos(np.deg2rad(wind_dir))
 
@@ -153,28 +176,34 @@ def _interpGrid(sparse_grid, xs, ys, interpolation_method):
         points,
         method=interpolation_method,
     )
-    return interp.reshape(len(xs) - 1, len(ys) - 1)
+    return interp.reshape(len(xs), len(ys))
 
 
 def _aggValuesToGrid(wind_u, wind_v, values, wind_bins, resolution, agg_method):
+    """Aggregate values into a grid based on wind speed and direction components.
+    Returns a pandas DataFrame with the aggregated values for each wind speed
+    and direction bin, and a numpy array of the values reshaped into a grid.
+
+    Note that the numpy array contains no information about the bins themselves."""
+
     df = pd.DataFrame([wind_u, wind_v, values]).T
     df.columns = ["wind_u", "wind_v", "values"]
     wind_u_cut = pd.cut(
         df["wind_u"],
         bins=wind_bins,
         include_lowest=True,
-        labels=np.arange(0, resolution - 1, 1),
+        # labels=np.arange(0, resolution - 1, 1),
     )
     wind_v_cut = pd.cut(
         df["wind_v"],
         bins=wind_bins,
         include_lowest=True,
-        labels=np.arange(0, resolution - 1, 1),
+        # labels=np.arange(0, resolution - 1, 1),
     )
     agged_values = df.groupby([wind_u_cut, wind_v_cut], observed=False).agg(
         {"values": agg_method}
     )
-    return agged_values.values.reshape(resolution - 1, resolution - 1)
+    return agged_values.values.reshape(resolution - 1, resolution - 1).T, agged_values
 
 
 def _excludeTooFar(true_points, pred_points, dist):
@@ -268,8 +297,8 @@ def BivariatePlotGrid(
     wind_bins = np.linspace(-wind_comp_abs_max, wind_comp_abs_max, resolution)
 
     # Aggregate values into bins. For convenience, we use pandas cut and groupby methods.
-    reshaped = _aggValuesToGrid(
-        wind_v, wind_u, values, wind_bins, resolution, agg_method
+    reshaped, _ = _aggValuesToGrid(
+        wind_u, wind_v, values, wind_bins, resolution, agg_method
     )
 
     # Interpolate, if requested
@@ -299,11 +328,13 @@ def _fitGAM(X, y, degfree, lam):
     return gam
 
 
-def BivariatePlotRawGAM(
+def BivariatePlotGAM(
     values,
     wind_speed,
     wind_dir,
+    bin_data_before_gam=False,
     pred_res=500,
+    agg_method="mean",
     positive=True,
     degfree=30,
     lam=0.6,
@@ -315,44 +346,115 @@ def BivariatePlotRawGAM(
     colourbar_label=None,
     wind_unit="m/s",
 ):
-    """Fits a GAM to the raw data, similar to the R openair package. Specifically fits
-    values ** 0.5 ~ s(wind_u) + s(wind_v), where s are smoothing splines, and returns
-    a plot of the fitted values.
+    """Fits a GAM the wind and values data then plots the GAM's predictions.
+    Specifically fits the square root of `values` to a tensor product of the wind
+    vector components $u$ and $v$.
 
-    Note that openair fits a GAM to binned data, but this function fits a GAM to the raw data.
+    Parameters
+    ----------
+    values : array-like
+        Values to be plotted. Should be the same length as wind_speed and wind_dir.
+    wind_speed : array-like
+        Wind speed data. Should be the same length as values and wind_dir.
+    wind_dir : array-like
+        Wind direction data. Should be the same length as values and wind_speed.
+    bin_data_before_gam : bool, default False
+        If True, the data will be binned/gridded before fitting the GAM. Binning the data can speed up GAM fitting
+        but smooths resulting plot on top of the smoothing the GAM already performs.
+    pred_res : int, default 500
+        The resolution of the prediction grid. This is the number of bins along each wind direction.
+    agg_method : str, default "mean"
+        The aggregation method to use when gridding the data. Options are "mean", "median", "sum", etc.
+        Any method accepted by pandas.DataFrame.groupby().agg can be used. This argument is ignored if
+        bin_data_before_gam is False.
+    positive : bool, default True
+        If True, the predictions will be forced to be non-negative. This is useful for data that should not
+        have negative values, such as concentrations or counts. This is done by simply setting values below 0 to 0.
+        Note that this step happens twice: once to the raw values before optionally gridding and fitting the GAM,
+        and again to the GAM predictions.
+    degfree : int, default 30
+        The degrees of freedom for the GAM. This controls the smoothness of the fit. A higher value will result in a
+        smoother fit, while a lower value will result in a more flexible fit.
+    lam : float, default 0.6
+        The regularization parameter for the GAM. This controls the amount of smoothing applied to the fit.
+    vmin : float, optional
+        The minimum value for the colour scale. If None, the minimum value of the predictions will be used.
+    vmax : float, optional
+        The maximum value for the colour scale. If None, the maximum value of the predictions will be used.
+    cmap : colormap, default cm.batlow
+        The colormap to use for the plot. This can be any colormap accepted by matplotlib. Colourmaps from
+        cmcrameri are recommended, as they are perceptually uniform and colourblind-friendly.
+    masking_method : str, default "near"
+        The method to use for masking the predictions. This is used to limit the predictions to a reasonable
+        boundary around the raw data. This is useful for preventing predictions from extending too far from the
+        Options are:
+         - "near": points within a set distance (1 m/s) of the raw data are preserved. This is similar to
+        how openair limits data. However, the implementation here can be slow for large datasets.
+         - "ch": a convext hull is drawn around the raw data and only predictions falling within this hull
+        are presented.
+         - "grid": raw data is gridded to a resolution of pred_res and only grid cells with raw data present
+        are preserved. This is best used with smaller values of pred_res and will produce an image that
+        looks like a smoothed version of the image produced by BivariatePlotGrid. Note that due to the
+        way the gridding calculation works, this method drops the final prediction along each axis. This
+        usually isn't a problem as the edges are often excluded after gridding anyways.
+    near_dist : float, default 1
+        The distance from the raw data within which predictions are preserved when masking_method is "near".
+        This is the distance in the units of the wind speed data (e.g., m/s).
+        This is only used if masking_method is "near".
+    colourbar_label : str, optional
+        The label for the colourbar. If None, no label will be added.
+    wind_unit : str, default "m/s"
+        The unit of the wind speed data. This is only used to label the colourbar and axes.
 
-    Masking method chooses how to cut GAM predictions to a reasonable boundary around the raw
-    data. Options are:
+    Returns
+    -------
+    fig, ax : tuple
+        A tuple containing the matplotlib figure and axes of the plot.
 
-    "near": points within a set distance (1 m/s) of the raw data are preserved. This is similar to
-    how openair limits data. However, the implementation here can be slow for large datasets.
-    "ch": a convext hull is drawn around the raw data and only predictions falling within this hull
-    are presented.
-    "grid": raw data is gridded to a resolution of pred_res and only grid cells with raw data present
-    are preserved. This is best used with smaller values of pred_res and will produce an image that
-    looks like a smoothed version of the image produced by BivariatePlotGrid. Note that due to the
-    way the gridding calculation works, this method drops the final prediction along each axis. This
-    usually isn't a problem as the edges are often excluded after gridding anyways.
-
-    near_dist is only used if masking_method is "near".
+    Notes
+    -----
+    - openair fits a GAM to binned data, though openair's approach seems to bin the data by wind speed and directions
+    before converting wind to vector components. This function differs when setting `bin_data_before_gam=True` in that it
+    splits the wind into vector components prior to binning, so `values` will be binned up based on a grid of $(u, v)$
+    vector components rather than bins of wind speed and direction. In terms of outcome, both this function and openair's
+    approach will produce similar results, and the process of binning/gridding the data serves to smooth the resulting
+    plot and potentially reduce calculation time in fitting the GAM.
     """
     # Get wind components
     wind_u, wind_v = _getWindComponents(wind_speed, wind_dir)
-
-    df = pd.DataFrame([wind_u, wind_v, values]).T
-    df.columns = ["wind_u", "wind_v", "values"]
-    df = df.dropna()
-    df["values"] = df["values"] ** 0.5
-    X = df[["wind_v", "wind_u"]]
-    y = df["values"]
-
-    gam = _fitGAM(X, y, degfree, lam)
-
     # Find largest absolute wind speed component and define bins
     wind_comp_abs_max = np.max(
         [np.abs(np.nanmin([wind_u, wind_v])), np.nanmax([wind_u, wind_v])]
     )
     wind_bins = np.linspace(-wind_comp_abs_max, wind_comp_abs_max, pred_res)
+
+    if positive:
+        values = np.where(values < 0, 0, values)
+
+    # Make DataFrame of wind components and values. This process differs depending
+    # on whether we are gridding the data prior to GAM-fitting.
+    if bin_data_before_gam:
+        _, df = _aggValuesToGrid(
+            wind_u, wind_v, values, wind_bins, pred_res, agg_method
+        )
+        df = df.reset_index()
+        # During gridding, pd.cut returns pd.Intervals as the indices of the bins.
+        # We need single numbers for fitting and plotting, so we'll use the midpoints.
+        df["wind_u"] = df["wind_u"].apply(lambda x: x.mid).copy()
+        df["wind_v"] = df["wind_v"].apply(lambda x: x.mid).copy()
+    else:
+        df = pd.DataFrame([wind_u, wind_v, values]).T
+        df.columns = ["wind_u", "wind_v", "values"]
+
+    df = df.dropna()
+    df["values"] = df["values"] ** 0.5
+    X = df[["wind_v", "wind_u"]].copy()
+    y = df["values"].copy()
+
+    # Fit the GAM
+    gam = _fitGAM(X, y, degfree, lam)
+
+    # Make grid of predictions
     points_x, points_y = np.meshgrid(wind_bins, wind_bins, indexing="ij")
     points = np.vstack([points_x.ravel(), points_y.ravel()]).T
     pred = (
@@ -365,7 +467,7 @@ def BivariatePlotRawGAM(
             pred_res, pred_res
         )
     elif masking_method == "grid":
-        grid = _aggValuesToGrid(wind_v, wind_u, values, wind_bins, pred_res, "mean")
+        grid, _ = _aggValuesToGrid(wind_v, wind_u, values, wind_bins, pred_res, "mean")
         mask = np.ma.masked_invalid(grid).mask
         pred = pred[:-1, :-1]
     elif masking_method == "ch":

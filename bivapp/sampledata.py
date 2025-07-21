@@ -102,9 +102,9 @@ def ImportTorontoMet():
     met_df["wind_speed"] = met_df["wind_speed"] + np.random.uniform(
         -0.5, 0.5, len(met_df.index)
     )
-    met_df.loc[met_df["wind_speed"] < 0, "wind_speed"] = (
-        0  # the jittering could introduce negatives
-    )
+    met_df.loc[
+        met_df["wind_speed"] < 0, "wind_speed"
+    ] = 0  # the jittering could introduce negatives
     met_df["wind_speed_m_s"] = met_df["wind_speed"] / 3.6
     met_df = met_df.drop(columns=["wind_speed"])
 

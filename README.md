@@ -21,7 +21,7 @@ import bivapp.plots as bp
 import cmcrameri.cm as cm
 
 df = ImportOpenairDataExample()
-fig, axs = bp.BivariatePlotRawGAM(
+fig, axs = bp.BivariatePlotGAM(
     df["so2"],
     df["ws"],
     df["wd"],
